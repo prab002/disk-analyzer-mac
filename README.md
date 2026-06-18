@@ -70,3 +70,7 @@ Open source — issues and pull requests are welcome. Open the repo at
 
 **Prabhanjan Sharma**
 [GitHub](https://github.com/prab002) · [LinkedIn](https://www.linkedin.com/in/prab-sharma/)
+
+## 📄 License
+
+Released under the [MIT License](LICENSE) © 2026 Prabhanjan Sharma.
