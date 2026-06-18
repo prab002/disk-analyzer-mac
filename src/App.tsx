@@ -1,10 +1,19 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open, confirm } from "@tauri-apps/plugin-dialog";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import Treemap from "./Treemap";
 import type { FileNode } from "./lib/types";
 import { formatBytes, LEGEND } from "./lib/format";
 import "./App.css";
+
+// Project owner — shown in the About panel.
+const OWNER = {
+  name: "Prabhanjan Sharma",
+  github: "https://github.com/prab002",
+  linkedin: "https://www.linkedin.com/in/prab-sharma/",
+  repo: "https://github.com/prab002/disk-analyzer",
+};
 
 export default function App() {
   const [root, setRoot] = useState<FileNode | null>(null);
@@ -14,6 +23,7 @@ export default function App() {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [home, setHome] = useState<string>("");
+  const [showAbout, setShowAbout] = useState(false);
 
   useEffect(() => {
     invoke<string>("home_dir")
@@ -128,6 +138,9 @@ export default function App() {
       <header className="topbar">
         <div className="brand">
           <span className="logo">◧</span> Disk Analyzer
+          <button className="owner-byline" onClick={() => setShowAbout(true)}>
+            by {OWNER.name}
+          </button>
         </div>
         <div className="actions">
           <button className="btn primary" onClick={pickFolder} disabled={scanning}>
@@ -151,6 +164,9 @@ export default function App() {
               Scan Home
             </button>
           )}
+          <button className="btn" onClick={() => setShowAbout(true)}>
+            About
+          </button>
         </div>
       </header>
 
@@ -258,6 +274,69 @@ export default function App() {
           )}
         </div>
       </footer>
+
+      {showAbout && (
+        <div className="modal-overlay" onClick={() => setShowAbout(false)}>
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="modal-close"
+              onClick={() => setShowAbout(false)}
+              aria-label="Close"
+            >
+              ×
+            </button>
+
+            <h2 className="modal-title">
+              <span className="logo">◧</span> Disk Analyzer
+            </h2>
+
+            <p className="modal-text">
+              A fast, native macOS disk-usage visualizer built with{" "}
+              <strong>Tauri</strong> (Rust) and <strong>React</strong>. It scans
+              a folder in parallel, lays every file and folder out as a treemap
+              where each rectangle's area is its size on disk, and lets you zoom
+              in, reveal items in Finder, and safely move space-hogs to the
+              Trash so you can find what's eating your drive in seconds.
+            </p>
+
+            <ul className="modal-list">
+              <li>Parallel filesystem scan with bounded memory use</li>
+              <li>Color-coded treemap by file type</li>
+              <li>Zoom into folders · one-click reveal or move to Trash</li>
+            </ul>
+
+            <div className="contribute">
+              <p className="contribute-text">
+                Open source — issues and pull requests are welcome.
+              </p>
+              <button
+                className="btn primary contribute-btn"
+                onClick={() => openUrl(OWNER.repo)}
+              >
+                ★ Contribute on GitHub
+              </button>
+            </div>
+
+            <div className="owner">
+              <div className="owner-label">Owner</div>
+              <div className="owner-name">{OWNER.name}</div>
+              <div className="owner-links">
+                <button className="btn" onClick={() => openUrl(OWNER.github)}>
+                  GitHub
+                </button>
+                <button className="btn" onClick={() => openUrl(OWNER.linkedin)}>
+                  LinkedIn
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
