@@ -24,6 +24,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [home, setHome] = useState<string>("");
   const [showAbout, setShowAbout] = useState(false);
+  // null = not checked yet; true/false = Full Disk Access granted or not.
+  const [hasFda, setHasFda] = useState<boolean | null>(null);
 
   useEffect(() => {
     invoke<string>("home_dir")
@@ -33,7 +35,14 @@ export default function App() {
           "Not running inside the Tauri app window. Open the native “Disk Analyzer” window that `pnpm tauri dev` launches — not localhost in a browser."
         )
       );
+    invoke<boolean>("has_full_disk_access")
+      .then(setHasFda)
+      .catch(() => setHasFda(null));
   }, []);
+
+  async function grantFullDiskAccess() {
+    await invoke("open_full_disk_access_settings").catch(() => {});
+  }
 
   const current = stack[stack.length - 1] ?? null;
 
@@ -199,6 +208,19 @@ export default function App() {
             })}
           </div>
         </nav>
+      )}
+
+      {hasFda === false && (
+        <div className="fda-banner">
+          <div className="fda-text">
+            <strong>Grant Full Disk Access (one time)</strong> to scan every
+            folder and subfolder without repeated permission prompts. Toggle{" "}
+            <em>Disk Analyzer</em> on, then quit &amp; reopen the app.
+          </div>
+          <button className="btn primary" onClick={grantFullDiskAccess}>
+            Open Full Disk Access settings
+          </button>
+        </div>
       )}
 
       {error && <div className="banner">{error}</div>}

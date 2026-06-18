@@ -195,6 +195,36 @@ fn home_dir() -> String {
         .unwrap_or_default()
 }
 
+/// Best-effort probe for Full Disk Access. Several locations under
+/// `~/Library` are readable *only* when the app has Full Disk Access, so if we
+/// can read one of them we treat FDA as granted. This lets the UI ask for the
+/// permission a single time (one grant covers every folder + subfolder) instead
+/// of macOS prompting per protected folder.
+#[tauri::command]
+fn has_full_disk_access() -> bool {
+    let Some(home) = dirs::home_dir() else {
+        return false;
+    };
+    // The TCC database itself is only readable with Full Disk Access.
+    if fs::File::open(home.join("Library/Application Support/com.apple.TCC/TCC.db")).is_ok() {
+        return true;
+    }
+    // Fallbacks — both are FDA-protected directories.
+    fs::read_dir(home.join("Library/Safari")).is_ok()
+        || fs::read_dir(home.join("Library/Mail")).is_ok()
+}
+
+/// Open System Settings directly at the Full Disk Access pane so the user can
+/// grant access once. (macOS applies the change after the app is relaunched.)
+#[tauri::command]
+fn open_full_disk_access_settings() -> Result<(), String> {
+    std::process::Command::new("open")
+        .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -204,7 +234,9 @@ pub fn run() {
             scan_directory,
             delete_to_trash,
             reveal_in_finder,
-            home_dir
+            home_dir,
+            has_full_disk_access,
+            open_full_disk_access_settings
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -174,6 +174,31 @@ body {
   border-bottom: 1px solid var(--line);
 }
 
+.fda-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 16px;
+  background: #3a2f0f;
+  color: #fde68a;
+  font-size: 13px;
+  line-height: 1.45;
+  border-bottom: 1px solid var(--line);
+}
+.fda-banner .fda-text {
+  min-width: 0;
+}
+.fda-banner em {
+  font-style: normal;
+  font-weight: 600;
+  color: #fff;
+}
+.fda-banner .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* Content / treemap */
 .content {
   flex: 1;
