@@ -78,6 +78,27 @@ export default function App() {
     setSelected(null);
   }
 
+  // Pop one level back up to the parent folder.
+  function goBack() {
+    setStack((s) => (s.length > 1 ? s.slice(0, -1) : s));
+    setSelected(null);
+  }
+
+  // Escape / Backspace go up a level — like the Finder.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.key === "Escape" || e.key === "Backspace") && stack.length > 1) {
+        // Don't hijack Backspace while typing in an input.
+        const t = e.target as HTMLElement;
+        if (t.tagName === "INPUT" || t.tagName === "TEXTAREA") return;
+        e.preventDefault();
+        goBack();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [stack.length]);
+
   async function trashSelected() {
     if (!selected) return;
     const ok = await confirm(
@@ -103,7 +124,7 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <div className={`app ${scanning ? "busy" : ""}`}>
       <header className="topbar">
         <div className="brand">
           <span className="logo">◧</span> Disk Analyzer
@@ -136,14 +157,31 @@ export default function App() {
       {/* Breadcrumb */}
       {stack.length > 0 && (
         <nav className="breadcrumb">
-          {stack.map((n, i) => (
-            <span key={n.path}>
-              <button className="crumb" onClick={() => jumpTo(i)}>
-                {i === 0 ? n.path : n.name}
-              </button>
-              {i < stack.length - 1 && <span className="sep">›</span>}
-            </span>
-          ))}
+          <button
+            className="back-btn"
+            onClick={goBack}
+            disabled={stack.length <= 1}
+            title="Back to parent folder (Esc)"
+          >
+            ‹ Back
+          </button>
+          <div className="crumbs">
+            {stack.map((n, i) => {
+              const isLast = i === stack.length - 1;
+              return (
+                <span key={n.path}>
+                  <button
+                    className={`crumb ${isLast ? "current" : ""}`}
+                    onClick={() => jumpTo(i)}
+                    disabled={isLast}
+                  >
+                    {i === 0 ? n.path : n.name}
+                  </button>
+                  {!isLast && <span className="sep">›</span>}
+                </span>
+              );
+            })}
+          </div>
         </nav>
       )}
 
@@ -154,6 +192,9 @@ export default function App() {
           <div className="placeholder">
             <div className="spinner" />
             <p>Scanning… walking the filesystem in parallel.</p>
+            <div className="scan-bar">
+              <span />
+            </div>
           </div>
         )}
 

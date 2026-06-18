@@ -140,29 +140,40 @@ fn build_tree(path: &Path, depth: usize) -> Option<Node> {
     }
 }
 
-/// Scan a directory and return its full size tree.
+/// Scan a directory and return its size tree.
+/// Runs on a blocking worker thread so the heavy filesystem walk never freezes
+/// the UI thread (which would show the macOS "beachball" cursor).
 #[tauri::command]
-fn scan_directory(path: String) -> Result<Node, String> {
-    let p = PathBuf::from(&path);
-    if !p.exists() {
-        return Err(format!("Path does not exist: {path}"));
-    }
-    build_tree(&p, MAX_TREE_DEPTH).ok_or_else(|| format!("Failed to scan: {path}"))
+async fn scan_directory(path: String) -> Result<Node, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let p = PathBuf::from(&path);
+        if !p.exists() {
+            return Err(format!("Path does not exist: {path}"));
+        }
+        build_tree(&p, MAX_TREE_DEPTH).ok_or_else(|| format!("Failed to scan: {path}"))
+    })
+    .await
+    .map_err(|e| format!("Scan task failed: {e}"))?
 }
 
 /// Move the given paths to the Trash (recoverable). Returns bytes freed.
+/// Off the UI thread — sizing a large folder before trashing can be slow.
 #[tauri::command]
-fn delete_to_trash(paths: Vec<String>) -> Result<u64, String> {
-    let mut freed = 0u64;
-    for path in &paths {
-        let p = Path::new(path);
-        // Compute size before deletion so we can report freed space.
-        // Use dir_totals (no node allocation) — we only need the byte count.
-        let (size, _) = dir_totals(p);
-        freed += size;
-        trash::delete(p).map_err(|e| format!("Failed to trash {path}: {e}"))?;
-    }
-    Ok(freed)
+async fn delete_to_trash(paths: Vec<String>) -> Result<u64, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut freed = 0u64;
+        for path in &paths {
+            let p = Path::new(path);
+            // Compute size before deletion so we can report freed space.
+            // Use dir_totals (no node allocation) — we only need the byte count.
+            let (size, _) = dir_totals(p);
+            freed += size;
+            trash::delete(p).map_err(|e| format!("Failed to trash {path}: {e}"))?;
+        }
+        Ok(freed)
+    })
+    .await
+    .map_err(|e| format!("Delete task failed: {e}"))?
 }
 
 /// Open Finder with the file selected.
