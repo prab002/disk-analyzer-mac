@@ -17,10 +17,20 @@ A fast, native **macOS disk-usage visualizer** built with [Tauri](https://tauri.
 
 Download the latest `.dmg` from the [**Releases page**](https://github.com/prab002/disk-analyzer/releases), open it, and drag **Disk Analyzer** into Applications.
 
-> [!NOTE]
-> The app is **not signed/notarized** with a paid Apple Developer account, so macOS blocks it the first time. To open it once:
-> - **Right-click the app → Open → Open**, or
-> - run: `xattr -cr /Applications/disk-analyzer.app`
+> [!IMPORTANT]
+> The app is **not notarized** by Apple (that needs a paid Developer account), so macOS Gatekeeper blocks it on first open with a *"Apple could not verify… is free of malware"* warning. This is expected for an open-source indie app — pick whichever unblock works for your macOS version:
+>
+> **Option A — Terminal (works on every macOS version, recommended):**
+> ```bash
+> xattr -cr /Applications/disk-analyzer.app
+> ```
+> Then open the app normally. (If you haven't moved it to Applications yet, use the path where the `.app` actually is, e.g. `~/Downloads/disk-analyzer.app`.)
+>
+> **Option B — System Settings (macOS Ventura/Sonoma/Sequoia):**
+> Try to open the app once (it gets blocked), then go to **System Settings → Privacy & Security**, scroll down, and click **"Open Anyway"**.
+>
+> **Option C — older macOS (Monterey and earlier):** right-click the app → **Open** → **Open**.
+> _(Note: on macOS Sequoia 15 this right-click trick no longer works — use Option A or B.)_
 
 ## 🛠️ Development
 
