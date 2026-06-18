@@ -1,0 +1,77 @@
+name: Release
+
+# Build a universal macOS DMG and publish it to a GitHub Release whenever a
+# version tag (e.g. v0.2.0) is pushed. Can also be run manually from the
+# Actions tab — pick a tag as the ref in the "Run workflow" dropdown.
+#
+# To cut a release:
+#   1. bump "version" in package.json + src-tauri/tauri.conf.json
+#   2. git commit -am "release: v0.2.0"
+#   3. git tag v0.2.0 && git push origin main --tags
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+# Needed so tauri-action can create releases / upload assets.
+permissions:
+  contents: write
+
+# Don't let two release builds for the same tag run at once.
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Setup Rust (Apple Silicon + Intel targets)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build universal DMG and publish release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Use the pushed tag (e.g. v0.2.0) as the release tag/name.
+          tagName: ${{ github.ref_name }}
+          releaseName: Disk Analyzer ${{ github.ref_name }}
+          releaseBody: |
+            ### Install
+            1. Download the `.dmg` below and open it.
+            2. Drag **Disk Analyzer** into Applications.
+
+            ### First launch (unsigned app)
+            macOS will block it the first time. Either **right-click the app → Open → Open**,
+            or run once: `xattr -cr /Applications/disk-analyzer.app`
+
+            Universal build — runs on both Apple Silicon and Intel Macs.
+          releaseDraft: false
+          prerelease: false
+          args: --target universal-apple-darwin
